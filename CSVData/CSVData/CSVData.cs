@@ -67,8 +67,8 @@ namespace CSVDataNS
                 string message = String.Format("CSVData CSVData: duplicate column names found in input ({0})", String.Join(",", columns));
                 throw new ArgumentOutOfRangeException(nameof(columns), message);
             }
-            _columns = columns;
-            _rows = rows;
+            _columns = columns.Select(x => x).ToList();
+            _rows = rows.Select(x => x).ToList();
             _columnsIdxMap = new Dictionary<string, int>();
             ConstructColIdxMap();
         }
@@ -129,6 +129,16 @@ namespace CSVDataNS
             return _rows[idx];
         }
 
+        public string GetElement(int rowIdx, string columnName)
+        {
+            return GetRow(rowIdx)[ColIdxMap[columnName]];
+        }
+
+        public void SetElement(int rowIdx, string columnName, string value)
+        {
+            GetRow(rowIdx)[ColIdxMap[columnName]] = value;
+        }
+
         public List<string> GetColumnRaw(string key)
         {
             int idx = ColIdxMap[key];
@@ -137,8 +147,7 @@ namespace CSVDataNS
 
         public CSVData GetColumn(string key)
         {
-            CSVData ret = new CSVData(new ColsType(), new RowsType());
-            ret.AddColumn(key, GetColumnRaw(key));
+            CSVData ret = new CSVData(new ColsType() { key }, GetColumnRaw(key).Select(r => new RowType() { r }).ToList());
             return ret;
         }
 
@@ -164,11 +173,21 @@ namespace CSVDataNS
                 k => GetColumnRaw(k)
             );
 
-            CSVData ret = new CSVData(new ColsType(), new RowsType());
+            CSVData ret = null;
 
             keys.ForEach(key =>
             {
-                ret.AddColumn(key, columns[key]);
+                if (ret == null)
+                {
+                    ret = new CSVData(new ColsType() { key }, columns[key].Select(r => new RowType() { r }).ToList());
+                }
+                else
+                {
+                    ret.AddColumn(
+                        key,
+                        columns[key]
+                    );
+                }
             });
 
             return ret;
@@ -226,7 +245,7 @@ namespace CSVDataNS
             }
             else
             {
-                _rows.Add(row);
+                _rows.Add(row.Select(x => x).ToList());
             }
         }
 
