@@ -129,6 +129,11 @@ namespace CSVDataNS
             return _rows[idx];
         }
 
+        public List<Dictionary<string, string>> ToListOfDicts()
+        {
+            return _rows.Select(row => ToDict(Cols, row)).ToList();
+        }
+
         public string GetElement(int rowIdx, string columnName)
         {
             return GetRow(rowIdx)[ColIdxMap[columnName]];

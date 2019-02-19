@@ -584,5 +584,15 @@ namespace CSVDataNS.Tests
             string expected = "A,B,C,D,E\na,b,c,d,2.5\na,b,c,e,2.5\na,\"X,Y\",b,f,2.5\nb,c,b,f,2.5\nb,c,b,f,2.5\na,b,c,e,2.5\nb,e,c,e,2.5";
             Assert.AreEqual(expected, data.ToCSVString());
         }
+
+        [TestMethod()]
+        public void ToListOfDictsTest()
+        {
+            var rawData = BuildTestCSVData();
+            CSVData data = new CSVData(rawData.Item1, rawData.Item2);
+            List<Dictionary<string, string>> res = data.ToListOfDicts();
+            Assert.IsTrue(res[3].Keys.All(key => data.ContainsKey(key)));
+            Assert.IsTrue(data.Cols.All(key => res[3].ContainsKey(key)));
+        }
     }
 }
