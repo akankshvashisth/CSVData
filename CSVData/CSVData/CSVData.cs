@@ -119,7 +119,7 @@ namespace CSVDataNS
             }
         }
 
-        public RowsType GetRowsRange(int startIdx, int count)
+        public RowsType GetRowsRangeRaw(int startIdx, int count)
         {
             return _rows.GetRange(startIdx, count);
         }
@@ -503,6 +503,46 @@ namespace CSVDataNS
         public string ToCSVString()
         {
             return ToEscapedDelimitedString(",", "\"", "\"", "\n");
+        }
+
+        public CSVData Filter(Func<RowType, bool> predicate)
+        {
+            return new CSVData(this.Cols, _rows.Where(predicate).ToList());
+        }
+
+        public CSVData Filter(Func<Dictionary<string, string>, bool> predicate)
+        {
+            return new CSVData(this.Cols, _rows.Where(x => predicate(ToDict(Cols, x))).ToList());
+        }
+
+        public List<T> MapRows<T>(Func<Dictionary<string, string>, T> func)
+        {
+            return _rows.Select(row => func(ToDict(this.Cols, row))).ToList();
+        }
+
+        public CSVData MapRows(List<string> keys, Func<RowType, List<string>> func)
+        {
+            return new CSVData(keys, this.MapRows(func));
+        }
+
+        public CSVData MapRows(List<string> keys, Func<Dictionary<string, string>, List<string>> func)
+        {
+            return new CSVData(keys, this.MapRows(func));
+        }
+
+        public void Sort<T>(Func<Dictionary<string, string>, T> comp)
+        {
+            _rows = _rows.OrderBy(row => comp(ToDict(Cols, row))).ToList();
+        }
+
+        public void SortDescending<T>(Func<Dictionary<string, string>, T> comp)
+        {
+            _rows = _rows.OrderByDescending(row => comp(ToDict(Cols, row))).ToList();
+        }
+
+        public CSVData GetRowsRange(int startIdx, int count)
+        {
+            return new CSVData(this.Cols, this.GetRowsRangeRaw(startIdx, count));
         }
     }
 

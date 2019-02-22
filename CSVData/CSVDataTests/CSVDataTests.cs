@@ -74,15 +74,28 @@ namespace CSVDataNS.Tests
         }
 
         [TestMethod()]
-        public void GetRowsRangeTest()
+        public void GetRowsRangeRawTest()
         {
             var rawData = BuildTestCSVData();
             CSVData data = new CSVData(rawData.Item1, rawData.Item2);
-            var rows = data.GetRowsRange(1, 3);
+            var rows = data.GetRowsRangeRaw(1, 3);
 
             for (int i = 0; i < 3; ++i)
             {
                 Assert.IsTrue(rawData.Item2[i + 1].SequenceEqual(rows[i]));
+            }
+        }
+
+        [TestMethod()]
+        public void GetRowsRangeTest()
+        {
+            var rawData = BuildTestCSVData();
+            CSVData data = new CSVData(rawData.Item1, rawData.Item2);
+            CSVData res = data.GetRowsRange(1, 3);
+
+            for (int i = 0; i < 3; ++i)
+            {
+                Assert.IsTrue(rawData.Item2[i + 1].SequenceEqual(res.GetRow(i)));
             }
         }
 
@@ -205,7 +218,42 @@ namespace CSVDataNS.Tests
         }
 
         [TestMethod()]
-        public void FilterInPlaceTest1()
+        public void FilterTest()
+        {
+            var rawData = BuildTestCSVData();
+            CSVData test = new CSVData(rawData.Item1, rawData.Item2);
+
+            int origRowsCount = test.RowsCount;
+
+            CSVData data = test.Filter(row => row["B"] == "e" && row["C"] == "c");
+
+            Assert.AreEqual(data.RowsCount, 1);
+            Assert.AreEqual(test.RowsCount, origRowsCount);
+
+            data.GetRow(0).SequenceEqual(rawData.Item2.Last());
+        }
+
+        [TestMethod()]
+        public void FilterTest1()
+        {
+            var rawData = BuildTestCSVData();
+            CSVData test = new CSVData(rawData.Item1, rawData.Item2);
+
+            int origRowsCount = test.RowsCount;
+
+            int bIdx = rawData.Item1.IndexOf("B");
+            int cIdx = rawData.Item1.IndexOf("C");
+
+            CSVData data = test.Filter(row => row[bIdx] == "e" && row[cIdx] == "c");
+
+            Assert.AreEqual(data.RowsCount, 1);
+            Assert.AreEqual(test.RowsCount, origRowsCount);
+
+            data.GetRow(0).SequenceEqual(rawData.Item2.Last());
+        }
+
+        [TestMethod()]
+        public void FilterInPlaceTest3()
         {
             var rawData = BuildTestCSVData();
             CSVData data = new CSVData(rawData.Item1, rawData.Item2);
@@ -246,7 +294,55 @@ namespace CSVDataNS.Tests
             List<string> ret = data.MapRows(row => row[bIdx] + row[cIdx]);
             Assert.AreEqual("bc,bc,cb,cb,cb,bc,ec", String.Join(",", ret));
 
-            List<int> ret2 = data.MapRows(row => row.Count);
+            List<int> ret2 = data.MapRows((List<string> row) => row.Count);
+
+            Assert.AreEqual(ret2.Distinct().ToList().Count, 1);
+            Assert.AreEqual(ret2.Distinct().ToList()[0], data.ColsCount);
+        }
+
+        [TestMethod()]
+        public void MapRowsTest1()
+        {
+            var rawData = BuildTestCSVData();
+            CSVData data = new CSVData(rawData.Item1, rawData.Item2);
+
+            List<string> ret = data.MapRows(row => row["B"] + row["C"]);
+            Assert.AreEqual("bc,bc,cb,cb,cb,bc,ec", String.Join(",", ret));
+
+            List<int> ret2 = data.MapRows((List<string> row) => row.Count);
+
+            Assert.AreEqual(ret2.Distinct().ToList().Count, 1);
+            Assert.AreEqual(ret2.Distinct().ToList()[0], data.ColsCount);
+        }
+
+        [TestMethod()]
+        public void MapRowsTest2()
+        {
+            var rawData = BuildTestCSVData();
+            CSVData data = new CSVData(rawData.Item1, rawData.Item2);
+
+            int bIdx = rawData.Item1.IndexOf("B");
+            int cIdx = rawData.Item1.IndexOf("C");
+
+            CSVData ret = data.MapRows(new List<string>() { "keys" }, row => new List<string>() { row[bIdx] + row[cIdx] });
+            Assert.AreEqual("bc,bc,cb,cb,cb,bc,ec", String.Join(",", ret.GetColumnRaw("keys")));
+
+            List<int> ret2 = data.MapRows((List<string> row) => row.Count);
+
+            Assert.AreEqual(ret2.Distinct().ToList().Count, 1);
+            Assert.AreEqual(ret2.Distinct().ToList()[0], data.ColsCount);
+        }
+
+        [TestMethod()]
+        public void MapRowsTest3()
+        {
+            var rawData = BuildTestCSVData();
+            CSVData data = new CSVData(rawData.Item1, rawData.Item2);
+
+            CSVData ret = data.MapRows(new List<string>() { "keys" }, row => new List<string>() { row["B"] + row["C"] });
+            Assert.AreEqual("bc,bc,cb,cb,cb,bc,ec", String.Join(",", ret.GetColumnRaw("keys")));
+
+            List<int> ret2 = data.MapRows((List<string> row) => row.Count);
 
             Assert.AreEqual(ret2.Distinct().ToList().Count, 1);
             Assert.AreEqual(ret2.Distinct().ToList()[0], data.ColsCount);
@@ -289,7 +385,7 @@ namespace CSVDataNS.Tests
 
             data.AddRows(newRows);
 
-            var test = data.GetRowsRange(data.RowsCount - 2, 2);
+            var test = data.GetRowsRangeRaw(data.RowsCount - 2, 2);
 
             Assert.IsTrue(test[0].SequenceEqual(newRow1));
             Assert.IsTrue(test[1].SequenceEqual(newRow2));
@@ -447,6 +543,52 @@ namespace CSVDataNS.Tests
             int aIdx = rawData.Item1.IndexOf("A");
             int dIdx = rawData.Item1.IndexOf("D");
             data.SortDescending(row => new Tuple<string, string>(row[dIdx], row[aIdx]));
+
+            List<List<string>> rows = new List<List<string>>();
+            rows.Add(new List<string>() { "a", "b", "c", "d", "2.5" });
+            rows.Add(new List<string>() { "a", "b", "c", "e", "2.5" });
+            rows.Add(new List<string>() { "a", "b", "c", "e", "2.5" });
+            rows.Add(new List<string>() { "b", "e", "c", "e", "2.5" });
+            rows.Add(new List<string>() { "a", "c", "b", "f", "2.5" });
+            rows.Add(new List<string>() { "b", "c", "b", "f", "2.5" });
+            rows.Add(new List<string>() { "b", "c", "b", "f", "2.5" });
+
+            rows.Reverse();
+
+            CSVData test = new CSVData(rawData.Item1, rows);
+
+            AssertCSVEqual(test, data);
+        }
+
+        [TestMethod()]
+        public void SortTest1()
+        {
+            var rawData = BuildTestCSVData();
+            CSVData data = new CSVData(rawData.Item1, rawData.Item2);
+
+            data.Sort(row => new Tuple<string, string>(row["D"], row["A"]));
+
+            List<List<string>> rows = new List<List<string>>();
+            rows.Add(new List<string>() { "a", "b", "c", "d", "2.5" });
+            rows.Add(new List<string>() { "a", "b", "c", "e", "2.5" });
+            rows.Add(new List<string>() { "a", "b", "c", "e", "2.5" });
+            rows.Add(new List<string>() { "b", "e", "c", "e", "2.5" });
+            rows.Add(new List<string>() { "a", "c", "b", "f", "2.5" });
+            rows.Add(new List<string>() { "b", "c", "b", "f", "2.5" });
+            rows.Add(new List<string>() { "b", "c", "b", "f", "2.5" });
+
+            CSVData test = new CSVData(rawData.Item1, rows);
+
+            AssertCSVEqual(test, data);
+        }
+
+        [TestMethod()]
+        public void SortDescendingTest1()
+        {
+            var rawData = BuildTestCSVData();
+            CSVData data = new CSVData(rawData.Item1, rawData.Item2);
+
+            data.SortDescending(row => new Tuple<string, string>(row["D"], row["A"]));
 
             List<List<string>> rows = new List<List<string>>();
             rows.Add(new List<string>() { "a", "b", "c", "d", "2.5" });
